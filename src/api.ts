@@ -75,3 +75,20 @@ export async function openFile(path: string): Promise<void> {
     throw err;
   }
 }
+export async function putJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PUT",
+    headers: buildHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handle<T>(res);
+}
+
+export async function patchJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handle<T>(res);
+}

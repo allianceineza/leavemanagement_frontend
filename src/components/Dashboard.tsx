@@ -140,11 +140,14 @@ function Workspace({ role }: { role: string }) {
     { id: "decide", label: pending.length > 0 ? `To decide (${pending.length})` : "To decide" },
     { id: "decisions", label: "My decisions" },
   ];
-  if (role === "Chief") tabs.push({ id: "hrleave", label: "HR staff on leave" });
+    if (role === "Chief") tabs.push({ id: "hrleave", label: "HR staff on leave" });
+
+  const staffLinks =
+    role === "Manager" || role === "Chief" ? [{ to: "/employees", label: "Employees" }] : [];
 
   return (
     <>
-      <AppHeader links={[{ to: "/my-leave", label: "My own leave" }]} />
+      <AppHeader links={[...staffLinks, { to: "/my-leave", label: "My own leave" }]} />
 
       <div className="dashboard">
         <h1 className="page-title">Leave approvals</h1>

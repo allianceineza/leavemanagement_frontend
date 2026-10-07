@@ -23,8 +23,10 @@ interface PendingRequest {
   end_date: string;
   number_of_days: number;
   reason: string | null;
+  has_document: number;
 }
 interface LeaveRow {
+  request_id: number;
   full_name: string;
   email: string;
   department_name: string;
@@ -35,11 +37,11 @@ interface LeaveRow {
   reason: string | null;
 }
 interface RequestRow extends LeaveRow {
-  request_id: number;
   status: string;
   decided_by: string | null;
   decision_comment: string | null;
   has_document: number;
+  requested_days: number;
 }
 interface Analytics {
   year: number;
@@ -108,6 +110,7 @@ export default function ManageDashboard() {
 
   const [summary, setSummary] = useState<Summary | null>(null);
   const [pending, setPending] = useState<PendingRequest[]>([]);
+  const [approveDays, setApproveDays] = useState<Record<number, string>>({});
   const [range, setRange] = useState({ from: localToday(), to: localToday() });
   const [onLeave, setOnLeave] = useState<LeaveRow[]>([]);
   const [filters, setFilters] = useState({
@@ -162,8 +165,11 @@ export default function ManageDashboard() {
     if (tab === "employees") run(async () => setEmployees(await getJson<EmployeeRow[]>("/manage/employees")));
   }, [tab]);
 
-  async function decide(id: number, decision: "Approved" | "Rejected") {
+  async function decide(id: number, decision: "Approved" | "Rejected", requestedDays: number) {
+    setMessage("");
     let comment = "";
+    let approvedDays: number | undefined;
+
     if (decision === "Rejected") {
       const answer = window.prompt("Reason for rejecting (the employee will see this):");
       if (answer === null) return;
@@ -172,14 +178,62 @@ export default function ManageDashboard() {
         setError("Please give a reason for the rejection (at least 3 characters).");
         return;
       }
+    } else {
+      const typed = approveDays[id];
+      const n = typed === undefined || typed === "" ? requestedDays : Number(typed);
+      if (!Number.isInteger(n) || n < 1 || n > requestedDays) {
+        setError(`The days to approve must be a whole number from 1 to ${requestedDays}.`);
+        return;
+      }
+      if (n < requestedDays) {
+        const answer = window.prompt(
+          `You are approving ${n} of ${requestedDays} working days.\nReason (the employee will see this):`
+        );
+        if (answer === null) return;
+        comment = answer.trim();
+        if (comment.length < 3) {
+          setError("Please explain why fewer days are approved (at least 3 characters).");
+          return;
+        }
+        approvedDays = n;
+      }
     }
+
     await run(async () => {
       const res = await postJson<{ message: string }>(`/leave/requests/${id}/decision`, {
         decision,
         comment,
+        approvedDays,
       });
       setMessage(res.message);
       setPending(await getJson<PendingRequest[]>("/leave/pending"));
+    });
+  }
+
+  async function adjustLeave(id: number, currentDays: number, reload: () => Promise<void>) {
+    setMessage("");
+    const answer = window.prompt(
+      `New total working days for this leave (now ${currentDays}).\nEnter a higher number to extend it, or a lower number to shorten it:`
+    );
+    if (answer === null) return;
+    const n = Number(answer);
+    if (!Number.isInteger(n) || n < 1) {
+      setError("Please enter a whole number of working days, 1 or more.");
+      return;
+    }
+    const why = window.prompt("Reason for the change (the employee will see this):");
+    if (why === null) return;
+    if (why.trim().length < 3) {
+      setError("Please give a reason for the change (at least 3 characters).");
+      return;
+    }
+    await run(async () => {
+      const res = await postJson<{ message: string }>(`/leave/requests/${id}/adjust`, {
+        days: n,
+        reason: why.trim(),
+      });
+      setMessage(res.message);
+      await reload();
     });
   }
 
@@ -217,8 +271,8 @@ export default function ManageDashboard() {
 
   return (
     <>
-      <AppHeader links={[{ to: "/my-leave", label: "My own leave" }]} />
-
+      
+      <AppHeader links={[{ to: "/employees", label: "Manage employees" }, { to: "/my-leave", label: "My own leave" }]} />
       <div className="dashboard">
         <h1 className="page-title">HR management</h1>
         <p className="page-subtitle">
@@ -300,11 +354,16 @@ export default function ManageDashboard() {
         {tab === "pending" && (
           <section>
             <h2>Pending requests</h2>
+            <p className="muted">
+              To approve fewer days than requested, change the number in the Approve days box
+              before clicking Approve. You will be asked for a reason, which the employee sees.
+            </p>
             <table>
               <thead>
                 <tr>
                   <th>Employee</th><th>Department</th><th>Type</th><th>From</th>
-                  <th>To</th><th>Days</th><th>Reason</th><th></th>
+                  <th>To</th><th>Days requested</th><th>Approve days</th><th>Reason</th>
+                  <th>Document</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -316,12 +375,41 @@ export default function ManageDashboard() {
                     <td>{r.start_date}</td>
                     <td>{r.end_date}</td>
                     <td>{r.number_of_days}</td>
+                    <td>
+                      <input
+                        type="number"
+                        min={1}
+                        max={r.number_of_days}
+                        className="days-input"
+                        aria-label={`Days to approve for ${r.full_name}`}
+                        value={approveDays[r.request_id] ?? String(r.number_of_days)}
+                        onChange={(e) =>
+                          setApproveDays({ ...approveDays, [r.request_id]: e.target.value })
+                        }
+                      />
+                    </td>
                     <td>{r.reason || ""}</td>
+                    <td>
+                      {Number(r.has_document) === 1 && (
+                        <button
+                          className="small-button secondary"
+                          onClick={() => run(() => openFile(`/leave/requests/${r.request_id}/document`))}
+                        >
+                          View
+                        </button>
+                      )}
+                    </td>
                     <td className="actions">
-                      <button className="small-button approve" onClick={() => decide(r.request_id, "Approved")}>
+                      <button
+                        className="small-button approve"
+                        onClick={() => decide(r.request_id, "Approved", r.number_of_days)}
+                      >
                         Approve
                       </button>
-                      <button className="small-button danger" onClick={() => decide(r.request_id, "Rejected")}>
+                      <button
+                        className="small-button danger"
+                        onClick={() => decide(r.request_id, "Rejected", r.number_of_days)}
+                      >
                         Reject
                       </button>
                     </td>
@@ -353,12 +441,12 @@ export default function ManageDashboard() {
               <thead>
                 <tr>
                   <th>Employee</th><th>Department</th><th>Type</th><th>From</th>
-                  <th>To</th><th>Days</th><th>Reason</th>
+                  <th>To</th><th>Days</th><th>Reason</th><th></th>
                 </tr>
               </thead>
               <tbody>
-                {onLeave.map((r, i) => (
-                  <tr key={i}>
+                {onLeave.map((r) => (
+                  <tr key={r.request_id}>
                     <td><Person name={r.full_name} email={r.email} /></td>
                     <td>{r.department_name}</td>
                     <td>{r.type_name}</td>
@@ -366,6 +454,14 @@ export default function ManageDashboard() {
                     <td>{r.end_date}</td>
                     <td>{r.number_of_days}</td>
                     <td>{r.reason || ""}</td>
+                    <td className="actions">
+                      <button
+                        className="small-button secondary"
+                        onClick={() => adjustLeave(r.request_id, r.number_of_days, loadOnLeave)}
+                      >
+                        Adjust days
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -419,7 +515,8 @@ export default function ManageDashboard() {
               <thead>
                 <tr>
                   <th>Employee</th><th>Department</th><th>Type</th><th>From</th><th>To</th>
-                  <th>Days</th><th>Status</th><th>Decided by</th><th>Comment</th><th>documents</th><th></th>
+                  <th>Days</th><th>Status</th><th>Decided by</th><th>Comment</th>
+                  <th>Document</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -430,20 +527,35 @@ export default function ManageDashboard() {
                     <td>{r.type_name}</td>
                     <td>{r.start_date}</td>
                     <td>{r.end_date}</td>
-                    <td>{r.number_of_days}</td>
+                    <td>
+                      {r.number_of_days}
+                      {Number(r.requested_days) !== Number(r.number_of_days) && (
+                        <div className="person-email">requested {r.requested_days}</div>
+                      )}
+                    </td>
                     <td><StatusBadge status={r.status} /></td>
                     <td>{r.decided_by || ""}</td>
                     <td>{r.decision_comment || ""}</td>
                     <td>
-                    {Number(r.has_document) === 1 && (
-                    <button
-                    className="small-button secondary"
-                    onClick={() => run(() => openFile(`/leave/requests/${r.request_id}/document`))}
-                    >
-                     View
-                    </button>
-            )}
-                     </td>
+                      {Number(r.has_document) === 1 && (
+                        <button
+                          className="small-button secondary"
+                          onClick={() => run(() => openFile(`/leave/requests/${r.request_id}/document`))}
+                        >
+                          View
+                        </button>
+                      )}
+                    </td>
+                    <td className="actions">
+                      {r.status === "Approved" && (
+                        <button
+                          className="small-button secondary"
+                          onClick={() => adjustLeave(r.request_id, r.number_of_days, loadRequests)}
+                        >
+                          Adjust days
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

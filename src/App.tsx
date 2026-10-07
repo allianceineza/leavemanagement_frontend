@@ -5,6 +5,8 @@ import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import ManageDashboard from "./components/ManageDashboard";
 import Myleave from "./components/Myleave";
+import Employees from "./components/employeecomponents/Employees";
+import EmployeeNew from "./components/employeecomponents/EmployeeNew";
 import "./App.css";
 
 function Protected({ children }: { children: ReactElement }) {
@@ -22,7 +24,7 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      
+      <Route path="/employees" element={<Employees />} />
       
       <Route
         path="/dashboard"
@@ -38,6 +40,14 @@ export default function App() {
           <Protected>
             <Myleave />
           </Protected>
+        }
+      />
+            <Route
+        path="/employees/new"
+        element={
+          <HROnly>
+            <EmployeeNew />
+          </HROnly>
         }
       />
       <Route
