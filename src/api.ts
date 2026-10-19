@@ -92,3 +92,10 @@ export async function patchJson<T>(path: string, body: unknown): Promise<T> {
   });
   return handle<T>(res);
 }
+export async function deleteJson<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "DELETE",
+    headers: buildHeaders(),
+  });
+  return handle<T>(res);
+}

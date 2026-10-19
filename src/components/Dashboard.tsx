@@ -141,13 +141,27 @@ function Workspace({ role }: { role: string }) {
     { id: "decisions", label: "My decisions" },
   ];
     if (role === "Chief") tabs.push({ id: "hrleave", label: "HR staff on leave" });
-
-  const staffLinks =
-    role === "Manager" || role === "Chief" ? [{ to: "/employees", label: "Employees" }] : [];
-
+    
+      const staffLinks =
+    role === "Manager" || role === "Chief"
+      ? [
+          { to: "/employees", label: "Employees" },
+          { to: "/recruitment", label: "Recruitment" },
+          { to: "/my-payslips", label: "My payslips" },
+        ]
+      : [];
   return (
-    <>
-      <AppHeader links={[...staffLinks, { to: "/my-leave", label: "My own leave" }]} />
+
+          <>
+      <AppHeader
+        links={[
+          ...staffLinks,
+          { to: "/profile", label: "My profile" },
+          { to: "/my-leave", label: "My own leave" },
+          { to: "/my-payslips", label: "My payslips" },
+        ]}
+        
+      />
 
       <div className="dashboard">
         <h1 className="page-title">Leave approvals</h1>

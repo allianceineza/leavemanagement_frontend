@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getJson, postJson, downloadFile, openFile } from "../api";
 import AppHeader from "../components/AppHeader";
 import StatusBadge from "../components/StatusBadge";
@@ -104,6 +105,7 @@ function Person({ name, email }: { name: string; email: string }) {
 }
 
 export default function ManageDashboard() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("overview");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -271,10 +273,25 @@ export default function ManageDashboard() {
 
   return (
     <>
-      
-      <AppHeader links={[{ to: "/employees", label: "Manage employees" }, { to: "/my-leave", label: "My own leave" }]} />
+      <AppHeader
+        links={[
+          { to: "/employees", label: "Manage employees" },
+          { to: "/recruitment", label: "Recruitment" },
+          { to: "/my-leave", label: "My own leave" },
+          { to: "/my-payslips", label: "My payslips" },
+          // { to: "/payroll/salaries", label: "Payroll" },
+          { to: "/payroll/runs", label: "Payroll" },
+          { to: "/profile", label: "My profile" },
+    
+          
+
+        ]}
+      />
+
       <div className="dashboard">
-        <h1 className="page-title">HR management</h1>
+        {/* <h1 className="page-title">HR management</h1>
+        <p className="page-subtitle"> */}
+        <h1 className="page-title">Leave management</h1>
         <p className="page-subtitle">
           Review leave requests, see who is away, and follow leave statistics.
         </p>
@@ -286,7 +303,7 @@ export default function ManageDashboard() {
               role="tab"
               aria-selected={tab === t.id}
               className={tab === t.id ? "tab active" : "tab"}
-              onClick={() => setTab(t.id)}
+              onClick={() => (t.id === "employees" ? navigate("/employees") : setTab(t.id))}
             >
               {t.label}
             </button>

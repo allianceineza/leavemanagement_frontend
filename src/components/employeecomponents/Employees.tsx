@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getJson, patchJson } from "../../api";
 import AppHeader from "../AppHeader";
 import StatusBadge from "../StatusBadge";
-import { useLocation, useNavigate,Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 interface EmployeeRow {
   employee_id: number;
@@ -41,9 +41,8 @@ function qs(params: Record<string, string>): string {
 export default function Employees() {
   const role = localStorage.getItem("role");
   const location = useLocation();
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const isHR = role === "HR";
-
 
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: 10, pages: 0 });
@@ -114,6 +113,8 @@ export default function Employees() {
     ? [
         { to: "/manage", label: "HR management" },
         { to: "/my-leave", label: "My own leave" },
+        { to: "/recruitment", label: "Recruitment" },
+        { to: "/profile", label: "My profile" },
       ]
     : [{ to: "/dashboard", label: "Dashboard" }];
 
@@ -123,7 +124,7 @@ export default function Employees() {
 
       <div className="dashboard">
         <h1 className="page-title">Employees</h1>
-                <p className="page-subtitle">
+        <p className="page-subtitle">
           {role === "Manager"
             ? "Employees in your department."
             : "Search and manage employee records."}
@@ -136,6 +137,7 @@ export default function Employees() {
             </button>
           </div>
         )}
+
         <div className="filters">
           <label htmlFor="empSearch">Search</label>
           <input
@@ -201,14 +203,16 @@ export default function Employees() {
                 <th>Hire date</th>
                 <th>Manager</th>
                 <th>Status</th>
-                {isHR && <th></th>}
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((e) => (
                 <tr key={e.employee_id}>
                   <td>
-                    <div className="person-name">{e.full_name}</div>
+                    <div className="person-name">
+                      <Link to={`/employees/${e.employee_id}`}>{e.full_name}</Link>
+                    </div>
                     <div className="person-email">{e.email}</div>
                   </td>
                   <td>{e.employee_code || ""}</td>
@@ -219,33 +223,47 @@ export default function Employees() {
                   <td>
                     <StatusBadge status={e.status} />
                   </td>
-                  {isHR && (
-                    <td className="actions">
-                      {e.status === "Active" ? (
-                        <>
-                          <button
-                            className="small-button secondary"
-                            onClick={() => changeStatus(e, "Inactive")}
-                          >
-                            Deactivate
-                          </button>
-                          <button
-                            className="small-button danger"
-                            onClick={() => changeStatus(e, "Terminated")}
-                          >
-                            Terminate
-                          </button>
-                        </>
-                      ) : (
+                  <td className="actions">
+                    <button
+                      className="small-button secondary"
+                      onClick={() => navigate(`/employees/${e.employee_id}`)}
+                    >
+                      View
+                    </button>
+                    {isHR && (
+                      <>
                         <button
-                          className="small-button approve"
-                          onClick={() => changeStatus(e, "Active")}
+                          className="small-button secondary"
+                          onClick={() => navigate(`/employees/${e.employee_id}/edit`)}
                         >
-                          Activate
+                          Edit
                         </button>
-                      )}
-                    </td>
-                  )}
+                        {e.status === "Active" ? (
+                          <>
+                            <button
+                              className="small-button secondary"
+                              onClick={() => changeStatus(e, "Inactive")}
+                            >
+                              Deactivate
+                            </button>
+                            <button
+                              className="small-button danger"
+                              onClick={() => changeStatus(e, "Terminated")}
+                            >
+                              Terminate
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="small-button approve"
+                            onClick={() => changeStatus(e, "Active")}
+                          >
+                            Activate
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

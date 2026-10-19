@@ -1,5 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { BRAND } from "../branding.ts";
+import { useContext } from "react";
+import { InLayoutContext } from "./layout/layoutContext";
+
 
 interface Props {
   links?: { to: string; label: string }[];
@@ -9,6 +12,7 @@ export default function AppHeader({ links = [] }: Props) {
   const navigate = useNavigate();
   const fullName = localStorage.getItem("fullName") || "";
   const role = localStorage.getItem("role") || "";
+  const inLayout = useContext(InLayoutContext);
 
   function logout() {
     localStorage.removeItem("token");
@@ -16,7 +20,20 @@ export default function AppHeader({ links = [] }: Props) {
     localStorage.removeItem("fullName");
     navigate("/login");
   }
-
+    if (inLayout) {
+    // Inside the sidebar layout only "Back ..." links are kept
+    const backLinks = links.filter((l) => /^back/i.test(l.label));
+    if (backLinks.length === 0) return null;
+    return (
+      <div className="back-links">
+        {backLinks.map((l) => (
+          <Link key={l.to} to={l.to}>
+            {l.label}
+          </Link>
+        ))}
+      </div>
+    );
+  }
   return (
     <header className="app-header">
       <div className="app-header-inner">

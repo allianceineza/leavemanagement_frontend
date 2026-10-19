@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { getJson, postForm, postJson, openFile } from "../api";
 import AppHeader from "../components/AppHeader";
 import StatusBadge from "../components/StatusBadge";
+import LeaveAlerts from "./LeaveAlerts";
 
 interface LeaveType {
   leave_type_id: number;
@@ -186,18 +187,29 @@ export default function MyLeave() {
       setError(err instanceof Error ? err.message : "Could not open the document");
     }
   }
-
-  const headerLinks =
+            const headerLinks =
     role === "HR"
-      ? [{ to: "/manage", label: "Management dashboard" }]
+      ? [
+          { to: "/manage", label: "Management dashboard" },
+          { to: "/employees", label: "Manage employees" },
+          { to: "/my-payslips", label: "My payslips" },
+          { to: "/profile", label: "My profile" },
+        ]
       : role === "Manager" || role === "Chief"
-        ? [{ to: "/dashboard", label: "Back to my workspace" }]
-        : [];
-
+        ? [
+            { to: "/dashboard", label: "Back to my workspace" },
+            { to: "/employees", label: "Employees" },
+            { to: "/my-payslips", label: "My payslips" },
+            { to: "/profile", label: "My profile" },
+          ]
+        : [
+            { to: "/my-payslips", label: "My payslips" },
+            { to: "/profile", label: "My profile" },
+          ];
   return (
     <>
       <AppHeader links={headerLinks} />
-
+       
       <div className="dashboard">
         <h1 className="page-title">My leave</h1>
         <p className="page-subtitle">Welcome, {fullName}. Here is your leave at a glance.</p>
@@ -208,7 +220,7 @@ export default function MyLeave() {
           </p>
         )}
         {message && <p className="success">{message}</p>}
-
+        <LeaveAlerts requests={mine} balances={balances} />
         {notices.length > 0 && (
           <section>
             <h2>New decisions on your leave requests</h2>
