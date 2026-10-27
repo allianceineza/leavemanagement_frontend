@@ -24,6 +24,14 @@ import PayslipView from "./components/payrollcomponents/PayslipView";
 import Settings from "./components/settingcomponents/Settings";
 import AppLayout from "./components/layout/AppLayout";
 import HROverview from "./components/HROverview";
+import Awards from "./components/awardcomponents/Awards";
+import AwardForm from "./components/awardcomponents/AwardForm";
+import AwardTypes from "./components/awardcomponents/AwardTypes";
+import MyAwards from "./components/awardcomponents/MyAwards";
+import Activities from "./components/activitycomponents/Activity";
+import ActivityForm from "./components/activitycomponents/ActivityForm";
+import ActivityDetails from "./components/activitycomponents/ActivityDetails";
+import MyActivities from "./components/activitycomponents/MyActivities";
 import "./App.css";
 
 // Every page inside this layout needs a login, and shows the sidebar
@@ -62,6 +70,8 @@ export default function App() {
         <Route path="/my-leave" element={<Myleave />} />
         <Route path="/profile" element={<MyProfile />} />
         <Route path="/my-payslips" element={<MyPayslips />} />
+        <Route path="/my-awards" element={<MyAwards />} />
+        <Route path="/my-activities" element={<MyActivities />} />
 
         {/* HR overview, leave management and settings */}
         <Route
@@ -211,6 +221,52 @@ export default function App() {
           element={
             <HROnly>
               <PayslipView />
+            </HROnly>
+          }
+        />
+
+        {/* Awards */}
+        <Route
+          path="/awards"
+          element={
+            <StaffOnly>
+              <Awards />
+            </StaffOnly>
+          }
+        />
+        <Route
+          path="/awards/new"
+          element={
+            <HROnly>
+              <AwardForm />
+            </HROnly>
+          }
+        />
+        <Route
+          path="/awards/types"
+          element={
+            <HROnly>
+              <AwardTypes />
+            </HROnly>
+          }
+        />
+
+        {/* Sports and activities */}
+        <Route path="/activities" element={<Activities />} />
+        <Route
+          path="/activities/new"
+          element={
+            <HROnly>
+              <ActivityForm />
+            </HROnly>
+          }
+        />
+        <Route path="/activities/:id" element={<ActivityDetails />} />
+        <Route
+          path="/activities/:id/edit"
+          element={
+            <HROnly>
+              <ActivityForm />
             </HROnly>
           }
         />

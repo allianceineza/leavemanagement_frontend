@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { getJson, patchJson } from "../../api";
-import AppHeader from "../AppHeader";
 import StatusBadge from "../StatusBadge";
 
 interface Profile {
@@ -20,31 +20,16 @@ interface Profile {
   status: string;
   role: string | null;
 }
-
-function headerLinks(role: string | null) {
-  if (role === "HR") {
-    return [
-      { to: "/manage", label: "HR management" },
-      { to: "/employees", label: "Manage employees" },
-      { to: "/my-leave", label: "My own leave" },
-      { to: "/my-payslips", label: "My payslips" },
-    ];
-  }
-  if (role === "Manager" || role === "Chief") {
-    return [
-      { to: "/dashboard", label: "Dashboard" },
-      { to: "/employees", label: "Employees" },
-      { to: "/my-leave", label: "My own leave" },
-      { to: "/my-payslips", label: "My payslips" },
-    ];
-  }
-  return [
-    { to: "/my-leave", label: "My leave" },
-    { to: "/my-payslips", label: "My payslips" },
-  ];
+interface AwardRow {
+  award_id: number;
+  award_date: string;
+  reason: string;
+  award_name: string;
 }
+
 export default function MyProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [awards, setAwards] = useState<AwardRow[]>([]);
   const [form, setForm] = useState({ phone: "", address: "" });
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [error, setError] = useState("");
@@ -66,6 +51,12 @@ export default function MyProfile() {
 
   useEffect(() => {
     load();
+  }, []);
+
+  useEffect(() => {
+    getJson<{ data: AwardRow[] }>("/awards/my")
+      .then((res) => setAwards(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setAwards([]));
   }, []);
 
   async function handleSubmit(e: FormEvent) {
@@ -142,116 +133,133 @@ export default function MyProfile() {
     : [];
 
   return (
-    <>
-      <AppHeader links={headerLinks(localStorage.getItem("role"))} />
-      <div className="dashboard">
-        <h1 className="page-title">My profile</h1>
-        <p className="page-subtitle">
-          You can update your phone, address and password. For anything else, please contact HR.
+    <div className="dashboard">
+      <h1 className="page-title">My profile</h1>
+      <p className="page-subtitle">
+        You can update your phone, address and password. For anything else, please contact HR.
+      </p>
+
+      {error && (
+        <p className="error" role="alert">
+          {error}
         </p>
+      )}
+      {message && <p className="success">{message}</p>}
 
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        {message && <p className="success">{message}</p>}
+      {profile && (
+        <>
+          <section>
+            <h2>
+              {profile.full_name} <StatusBadge status={profile.status} />
+            </h2>
+            <table>
+              <tbody>
+                {rows.map(([label, value]) => (
+                  <tr key={label}>
+                    <th>{label}</th>
+                    <td>{value || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
 
-        {profile && (
-          <>
-            <section>
-              <h2>
-                {profile.full_name} <StatusBadge status={profile.status} />
-              </h2>
-              <table>
-                <tbody>
-                  {rows.map(([label, value]) => (
-                    <tr key={label}>
-                      <th>{label}</th>
-                      <td>{value || ""}</td>
-                    </tr>
+          <section>
+            <h2>My awards ({awards.length})</h2>
+            {awards.length === 0 ? (
+              <p className="empty">You have not received an award yet.</p>
+            ) : (
+              <>
+                <ul>
+                  {awards.slice(0, 5).map((a) => (
+                    <li key={a.award_id}>
+                      <strong>{a.award_name}</strong>, {String(a.award_date).slice(0, 10)}
+                    </li>
                   ))}
-                </tbody>
-              </table>
-            </section>
-
-            <section>
-              <h2>My contact details</h2>
-              <form onSubmit={handleSubmit} className="request-form">
-                <div className="form-grid">
-                  <div>
-                    <label htmlFor="phone">Phone</label>
-                    <input
-                      id="phone"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="address">Address</label>
-                    <input
-                      id="address"
-                      value={form.address}
-                      onChange={(e) => setForm({ ...form, address: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <button type="submit" className="submit" disabled={saving}>
-                  {saving ? "Saving..." : "Save my details"}
-                </button>
-              </form>
-            </section>
-
-            <section>
-              <h2>Change my password</h2>
-              {pwError && (
-                <p className="error" role="alert">
-                  {pwError}
+                </ul>
+                <p>
+                  <Link to="/my-awards">See all my awards</Link>
                 </p>
-              )}
-              {pwMessage && <p className="success">{pwMessage}</p>}
-              <form onSubmit={handlePassword} className="request-form">
-                <div className="form-grid">
-                  <div>
-                    <label htmlFor="currentPassword">Current password</label>
-                    <input
-                      id="currentPassword"
-                      type="password"
-                      autoComplete="current-password"
-                      value={pw.current}
-                      onChange={(e) => setPw({ ...pw, current: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="newPassword">New password</label>
-                    <input
-                      id="newPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      value={pw.next}
-                      onChange={(e) => setPw({ ...pw, next: e.target.value })}
-                    />
-                    <p className="hint">At least 8 characters.</p>
-                  </div>
-                  <div>
-                    <label htmlFor="confirmPassword">Confirm new password</label>
-                    <input
-                      id="confirmPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      value={pw.confirm}
-                      onChange={(e) => setPw({ ...pw, confirm: e.target.value })}
-                    />
-                  </div>
+              </>
+            )}
+          </section>
+
+          <section>
+            <h2>My contact details</h2>
+            <form onSubmit={handleSubmit} className="request-form">
+              <div className="form-grid">
+                <div>
+                  <label htmlFor="phone">Phone</label>
+                  <input
+                    id="phone"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
                 </div>
-                <button type="submit" className="submit" disabled={savingPw}>
-                  {savingPw ? "Changing..." : "Change password"}
-                </button>
-              </form>
-            </section>
-          </>
-        )}
-      </div>
-    </>
+                <div>
+                  <label htmlFor="address">Address</label>
+                  <input
+                    id="address"
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  />
+                </div>
+              </div>
+              <button type="submit" className="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save my details"}
+              </button>
+            </form>
+          </section>
+
+          <section>
+            <h2>Change my password</h2>
+            {pwError && (
+              <p className="error" role="alert">
+                {pwError}
+              </p>
+            )}
+            {pwMessage && <p className="success">{pwMessage}</p>}
+            <form onSubmit={handlePassword} className="request-form">
+              <div className="form-grid">
+                <div>
+                  <label htmlFor="currentPassword">Current password</label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    value={pw.current}
+                    onChange={(e) => setPw({ ...pw, current: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newPassword">New password</label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={pw.next}
+                    onChange={(e) => setPw({ ...pw, next: e.target.value })}
+                  />
+                  <p className="hint">At least 8 characters.</p>
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword">Confirm new password</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={pw.confirm}
+                    onChange={(e) => setPw({ ...pw, confirm: e.target.value })}
+                  />
+                </div>
+              </div>
+              <button type="submit" className="submit" disabled={savingPw}>
+                {savingPw ? "Changing..." : "Change password"}
+              </button>
+            </form>
+          </section>
+        </>
+      )}
+    </div>
   );
 }
